@@ -94,9 +94,6 @@ emit event = do
 
 -- The timing requirements are assured by the VMIN and VTIME set for the
 -- device.
---
--- Precondition: Under the threaded runtime. Only current use is from a
--- forkOS thread. That case satisfies precondition.
 readFromDevice :: InputM ByteString
 readFromDevice = do
     fd <- use deviceFd
@@ -174,7 +171,7 @@ initInput settings classifyTable = do
                    <*> pure (return ())
                    <*> pure (return ())
                    <*> pure (const $ return ())
-    inputThread <- forkOSFinally (runInputProcessorLoop classifyTable input devFd)
+    inputThread <- forkIOFinally (runInputProcessorLoop classifyTable input devFd)
                                  (\_ -> putMVar stopSync ())
     let killAndWait = do
           killThread inputThread
@@ -183,9 +180,9 @@ initInput settings classifyTable = do
 
 foreign import ccall "vty_set_term_timing" setTermTiming :: Fd -> Int -> Int -> IO ()
 
-forkOSFinally :: IO a -> (Either SomeException a -> IO ()) -> IO ThreadId
-forkOSFinally action and_then =
-  mask $ \restore -> forkOS $ try (restore action) >>= and_then
+forkIOFinally :: IO a -> (Either SomeException a -> IO ()) -> IO ThreadId
+forkIOFinally action and_then =
+  mask $ \restore -> forkIO $ try (restore action) >>= and_then
 
 (<>=) :: (MonadState s m, Monoid a) => ASetter' s a -> a -> m ()
 l <>= a = modify (l <>~ a)

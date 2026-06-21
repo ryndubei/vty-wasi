@@ -1,6 +1,7 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE ForeignFunctionInterface #-}
 -- Generate some input bytes and delays between blocks of input bytes.
 -- Verify the events produced are as expected.
 module Main where
@@ -80,8 +81,8 @@ genEventsUsingIoActions maxDuration inputAction outputAction = do
     let maxDuration' = max minTimout maxDuration
     readComplete <- newEmptyMVar
     writeComplete <- newEmptyMVar
-    _ <- forkOS $ inputAction `finally` putMVar writeComplete ()
-    _ <- forkOS $ outputAction `finally` putMVar readComplete ()
+    _ <- forkIO $ inputAction `finally` putMVar writeComplete ()
+    _ <- forkIO $ outputAction `finally` putMVar readComplete ()
     Just () <- timeout maxDuration' $ takeMVar writeComplete
     Just () <- timeout maxDuration' $ takeMVar readComplete
     return ()
