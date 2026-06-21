@@ -17,7 +17,7 @@ extra-source-files: cbits/gwinsz.h
 
 source-repository head
   type: git
-  location: https://github.com/jtdaugherty/vty-unix.git
+  location: https://github.com/ryndubei/vty-wasi.git
 
 common warnings
     ghc-options: -Wall
