@@ -8,10 +8,10 @@ module Main where
 import Verify.Graphics.Vty.Output
 
 import Graphics.Vty hiding (resize)
-import Graphics.Vty.Platform.Unix.Input
-import Graphics.Vty.Platform.Unix.Input.Terminfo
-import Graphics.Vty.Platform.Unix.Input.Loop
-import Graphics.Vty.Platform.Unix.Settings
+import Graphics.Vty.Platform.Wasi.Input
+import Graphics.Vty.Platform.Wasi.Input.Terminfo
+import Graphics.Vty.Platform.Wasi.Input.Loop
+import Graphics.Vty.Platform.Wasi.Settings
 
 import Control.Concurrent
 import Control.Concurrent.STM

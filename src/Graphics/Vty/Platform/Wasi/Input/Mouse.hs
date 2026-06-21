@@ -5,7 +5,7 @@
 --
 -- This module is exposed for testing purposes only; applications should
 -- never need to import this directly.
-module Graphics.Vty.Platform.Unix.Input.Mouse
+module Graphics.Vty.Platform.Wasi.Input.Mouse
   ( requestMouseEvents
   , disableMouseEvents
   , isMouseEvent
@@ -14,8 +14,8 @@ module Graphics.Vty.Platform.Unix.Input.Mouse
 where
 
 import Graphics.Vty.Input.Events
-import Graphics.Vty.Platform.Unix.Input.Classify.Types
-import Graphics.Vty.Platform.Unix.Input.Classify.Parse
+import Graphics.Vty.Platform.Wasi.Input.Classify.Types
+import Graphics.Vty.Platform.Wasi.Input.Classify.Parse
 
 import Control.Monad
 import Data.Maybe (catMaybes)

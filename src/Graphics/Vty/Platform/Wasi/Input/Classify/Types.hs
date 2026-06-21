@@ -3,7 +3,7 @@
 -- This module is exposed for testing purposes only; applications should
 -- never need to import this directly.
 {-# LANGUAGE StrictData #-}
-module Graphics.Vty.Platform.Unix.Input.Classify.Types
+module Graphics.Vty.Platform.Wasi.Input.Classify.Types
   ( KClass(..)
   , ClassifierState(..)
   )

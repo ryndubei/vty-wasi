@@ -3,7 +3,7 @@
 --
 -- This module is exposed for testing purposes only; applications should
 -- never need to import this directly.
-module Graphics.Vty.Platform.Unix.Input.Classify.Parse
+module Graphics.Vty.Platform.Wasi.Input.Classify.Parse
   ( Parser
   , runParser
   , failParse
@@ -14,7 +14,7 @@ module Graphics.Vty.Platform.Unix.Input.Classify.Parse
 where
 
 import Graphics.Vty.Input.Events
-import Graphics.Vty.Platform.Unix.Input.Classify.Types
+import Graphics.Vty.Platform.Wasi.Input.Classify.Types
 
 import Control.Monad.Trans.Maybe
 import Control.Monad.State

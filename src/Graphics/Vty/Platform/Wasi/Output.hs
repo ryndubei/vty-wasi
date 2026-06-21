@@ -4,7 +4,7 @@
 --
 -- This module is exposed for testing purposes only; applications should
 -- never need to import this directly.
-module Graphics.Vty.Platform.Unix.Output
+module Graphics.Vty.Platform.Wasi.Output
   ( buildOutput
   )
 where
@@ -12,10 +12,10 @@ where
 import Graphics.Vty.Config
 import Graphics.Vty.Output
 
-import Graphics.Vty.Platform.Unix.Settings
-import Graphics.Vty.Platform.Unix.Output.Color (detectColorMode)
-import Graphics.Vty.Platform.Unix.Output.XTermColor as XTermColor
-import Graphics.Vty.Platform.Unix.Output.TerminfoBased as TerminfoBased
+import Graphics.Vty.Platform.Wasi.Settings
+import Graphics.Vty.Platform.Wasi.Output.Color (detectColorMode)
+import Graphics.Vty.Platform.Wasi.Output.XTermColor as XTermColor
+import Graphics.Vty.Platform.Wasi.Output.TerminfoBased as TerminfoBased
 
 import Data.List (isPrefixOf)
 
@@ -27,9 +27,9 @@ import Data.Monoid ((<>))
 --
 -- The specific output implementation chosen is based
 -- on the @TERM@ environment variable and ultimately
--- uses @Graphics.Vty.Platform.Unix.Output.XTermColor@
+-- uses @Graphics.Vty.Platform.Wasi.Output.XTermColor@
 -- for terminals that look @xterm@-like or
--- @Graphics.Vty.Platform.Unix.Output.TerminfoBased@ as a fallback
+-- @Graphics.Vty.Platform.Wasi.Output.TerminfoBased@ as a fallback
 -- otherwise.
 --
 -- * If @TERM@ starts with @xterm@, @screen@, @rxvt@, or @tmux@, this

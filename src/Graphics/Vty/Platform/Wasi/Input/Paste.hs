@@ -4,7 +4,7 @@
 --
 -- This module is exposed for testing purposes only; applications should
 -- never need to import this directly.
-module Graphics.Vty.Platform.Unix.Input.Paste
+module Graphics.Vty.Platform.Wasi.Input.Paste
   ( parseBracketedPaste
   , bracketedPasteStarted
   , bracketedPasteFinished
@@ -15,7 +15,7 @@ import qualified Data.ByteString.Char8 as BS8
 import Data.ByteString.Char8 (ByteString)
 
 import Graphics.Vty.Input.Events
-import Graphics.Vty.Platform.Unix.Input.Classify.Types
+import Graphics.Vty.Platform.Wasi.Input.Classify.Types
 
 bracketedPasteStart :: ByteString
 bracketedPasteStart = BS8.pack "\ESC[200~"

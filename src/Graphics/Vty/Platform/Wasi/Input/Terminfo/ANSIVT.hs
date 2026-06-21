@@ -6,7 +6,7 @@
 --
 -- This module is exposed for testing purposes only; applications should
 -- never need to import this directly.
-module Graphics.Vty.Platform.Unix.Input.Terminfo.ANSIVT
+module Graphics.Vty.Platform.Wasi.Input.Terminfo.ANSIVT
   ( classifyTable
   )
 where

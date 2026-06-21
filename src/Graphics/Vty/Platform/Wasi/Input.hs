@@ -112,7 +112,7 @@
 -- == See also
 --
 -- * http://www.leonerd.org.uk/hacks/fixterms/
-module Graphics.Vty.Platform.Unix.Input
+module Graphics.Vty.Platform.Wasi.Input
   ( buildInput
   , attributeControl
   )
@@ -130,9 +130,9 @@ import System.Posix.Types (Fd(..))
 import Graphics.Vty.Input
 import Graphics.Vty.Config (VtyUserConfig(..))
 
-import Graphics.Vty.Platform.Unix.Settings
-import Graphics.Vty.Platform.Unix.Input.Loop
-import Graphics.Vty.Platform.Unix.Input.Terminfo (classifyMapForTerm)
+import Graphics.Vty.Platform.Wasi.Settings
+import Graphics.Vty.Platform.Wasi.Input.Loop
+import Graphics.Vty.Platform.Wasi.Input.Terminfo (classifyMapForTerm)
 
 buildInput :: VtyUserConfig -> UnixSettings -> IO Input
 buildInput userConfig settings = do

@@ -4,7 +4,7 @@
 --
 -- This module is exposed for testing purposes only; applications should
 -- never need to import this directly.
-module Graphics.Vty.Platform.Unix.Output.TerminfoBased
+module Graphics.Vty.Platform.Wasi.Output.TerminfoBased
   ( reserveTerminal
   , setWindowSize
   )

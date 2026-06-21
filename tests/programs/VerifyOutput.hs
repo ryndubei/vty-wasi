@@ -7,8 +7,8 @@ module VerifyOutput where
 import Verify
 
 import Graphics.Vty
-import Graphics.Vty.Platform.Unix.Settings
-import Graphics.Vty.Platform.Unix.Output
+import Graphics.Vty.Platform.Wasi.Settings
+import Graphics.Vty.Platform.Wasi.Output
 
 import Verify.Graphics.Vty.Image
 import Verify.Graphics.Vty.Output

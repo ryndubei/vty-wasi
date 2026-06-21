@@ -5,7 +5,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 -- | Runtime settings for @vty-unix@. Most applications will not need to
 -- change any of these settings.
-module Graphics.Vty.Platform.Unix.Settings
+module Graphics.Vty.Platform.Wasi.Settings
   ( VtyUnixConfigurationError(..)
   , UnixSettings(..)
   , currentTerminalName

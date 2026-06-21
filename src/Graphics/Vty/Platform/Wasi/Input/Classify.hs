@@ -2,17 +2,17 @@
 -- This makes a kind of trie. Has space efficiency issues with large
 -- input blocks. Likely building a parser and just applying that would
 -- be better.
-module Graphics.Vty.Platform.Unix.Input.Classify
+module Graphics.Vty.Platform.Wasi.Input.Classify
   ( classify
   )
 where
 
 import Graphics.Vty.Input.Events
 
-import Graphics.Vty.Platform.Unix.Input.Classify.Types
-import Graphics.Vty.Platform.Unix.Input.Mouse
-import Graphics.Vty.Platform.Unix.Input.Focus
-import Graphics.Vty.Platform.Unix.Input.Paste
+import Graphics.Vty.Platform.Wasi.Input.Classify.Types
+import Graphics.Vty.Platform.Wasi.Input.Mouse
+import Graphics.Vty.Platform.Wasi.Input.Focus
+import Graphics.Vty.Platform.Wasi.Input.Paste
 
 import Codec.Binary.UTF8.Generic (decode)
 

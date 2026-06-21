@@ -1,8 +1,8 @@
 cabal-version:      3.0
-name:               vty-unix
+name:               vty-wasi
 version:            0.3.0.0
-synopsis:           Unix backend for Vty
-description:        This package provides Unix terminal support for Vty.
+synopsis:           wasi backend for Vty
+description:        Slightly modified version of vty-unix that can run on wasm32-wasi
 license:            BSD-3-Clause
 license-file:       LICENSE
 author:             Jonathan Daugherty
@@ -31,22 +31,22 @@ library
                       cbits/gwinsz.c
     exposed-modules:  Data.Terminfo.Eval
                       Data.Terminfo.Parse
-                      Graphics.Vty.Platform.Unix
-                      Graphics.Vty.Platform.Unix.Input
-                      Graphics.Vty.Platform.Unix.Input.Classify
-                      Graphics.Vty.Platform.Unix.Input.Classify.Parse
-                      Graphics.Vty.Platform.Unix.Input.Classify.Types
-                      Graphics.Vty.Platform.Unix.Input.Focus
-                      Graphics.Vty.Platform.Unix.Input.Loop
-                      Graphics.Vty.Platform.Unix.Input.Mouse
-                      Graphics.Vty.Platform.Unix.Input.Paste
-                      Graphics.Vty.Platform.Unix.Input.Terminfo
-                      Graphics.Vty.Platform.Unix.Input.Terminfo.ANSIVT
-                      Graphics.Vty.Platform.Unix.Output
-                      Graphics.Vty.Platform.Unix.Output.Color
-                      Graphics.Vty.Platform.Unix.Output.TerminfoBased
-                      Graphics.Vty.Platform.Unix.Output.XTermColor
-                      Graphics.Vty.Platform.Unix.Settings
+                      Graphics.Vty.Platform.Wasi
+                      Graphics.Vty.Platform.Wasi.Input
+                      Graphics.Vty.Platform.Wasi.Input.Classify
+                      Graphics.Vty.Platform.Wasi.Input.Classify.Parse
+                      Graphics.Vty.Platform.Wasi.Input.Classify.Types
+                      Graphics.Vty.Platform.Wasi.Input.Focus
+                      Graphics.Vty.Platform.Wasi.Input.Loop
+                      Graphics.Vty.Platform.Wasi.Input.Mouse
+                      Graphics.Vty.Platform.Wasi.Input.Paste
+                      Graphics.Vty.Platform.Wasi.Input.Terminfo
+                      Graphics.Vty.Platform.Wasi.Input.Terminfo.ANSIVT
+                      Graphics.Vty.Platform.Wasi.Output
+                      Graphics.Vty.Platform.Wasi.Output.Color
+                      Graphics.Vty.Platform.Wasi.Output.TerminfoBased
+                      Graphics.Vty.Platform.Wasi.Output.XTermColor
+                      Graphics.Vty.Platform.Wasi.Settings
     build-depends:    base >= 4.8 && < 5,
                       blaze-builder,
                       bytestring,

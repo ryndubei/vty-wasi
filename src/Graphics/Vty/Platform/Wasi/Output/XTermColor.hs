@@ -3,16 +3,16 @@
 --
 -- This module is exposed for testing purposes only; applications should
 -- never need to import this directly.
-module Graphics.Vty.Platform.Unix.Output.XTermColor
+module Graphics.Vty.Platform.Wasi.Output.XTermColor
   ( reserveTerminal
   )
 where
 
 import Graphics.Vty.Output
-import Graphics.Vty.Platform.Unix.Input.Mouse
-import Graphics.Vty.Platform.Unix.Input.Focus
+import Graphics.Vty.Platform.Wasi.Input.Mouse
+import Graphics.Vty.Platform.Wasi.Input.Focus
 import Graphics.Vty.Attributes.Color (ColorMode)
-import qualified Graphics.Vty.Platform.Unix.Output.TerminfoBased as TerminfoBased
+import qualified Graphics.Vty.Platform.Wasi.Output.TerminfoBased as TerminfoBased
 
 import Blaze.ByteString.Builder (writeToByteString)
 import Blaze.ByteString.Builder.Word (writeWord8)

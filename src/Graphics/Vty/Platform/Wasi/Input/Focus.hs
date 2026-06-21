@@ -2,7 +2,7 @@
 --
 -- This module is exposed for testing purposes only; applications should
 -- never need to import this directly.
-module Graphics.Vty.Platform.Unix.Input.Focus
+module Graphics.Vty.Platform.Wasi.Input.Focus
   ( requestFocusEvents
   , disableFocusEvents
   , isFocusEvent
@@ -11,8 +11,8 @@ module Graphics.Vty.Platform.Unix.Input.Focus
 where
 
 import Graphics.Vty.Input.Events
-import Graphics.Vty.Platform.Unix.Input.Classify.Types
-import Graphics.Vty.Platform.Unix.Input.Classify.Parse
+import Graphics.Vty.Platform.Wasi.Input.Classify.Types
+import Graphics.Vty.Platform.Wasi.Input.Classify.Parse
 
 import Control.Monad
 

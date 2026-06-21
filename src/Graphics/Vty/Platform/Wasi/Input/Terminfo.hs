@@ -2,7 +2,7 @@
 --
 -- This module is exposed for testing purposes only; applications should
 -- never need to import this directly.
-module Graphics.Vty.Platform.Unix.Input.Terminfo
+module Graphics.Vty.Platform.Wasi.Input.Terminfo
   ( classifyMapForTerm
   , specialSupportKeys
   , capsClassifyMap
@@ -14,7 +14,7 @@ where
 
 import Data.Maybe (mapMaybe)
 import Graphics.Vty.Input.Events
-import qualified Graphics.Vty.Platform.Unix.Input.Terminfo.ANSIVT as ANSIVT
+import qualified Graphics.Vty.Platform.Wasi.Input.Terminfo.ANSIVT as ANSIVT
 
 import Control.Arrow
 import System.Console.Terminfo

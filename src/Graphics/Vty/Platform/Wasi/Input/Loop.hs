@@ -15,16 +15,16 @@
 -- more of these examples...
 --
 -- reference: http://www.unixwiz.net/techtips/termios-vmin-vtime.html
-module Graphics.Vty.Platform.Unix.Input.Loop
+module Graphics.Vty.Platform.Wasi.Input.Loop
   ( initInput
   )
 where
 
 import Graphics.Vty.Input
 
-import Graphics.Vty.Platform.Unix.Settings
-import Graphics.Vty.Platform.Unix.Input.Classify
-import Graphics.Vty.Platform.Unix.Input.Classify.Types
+import Graphics.Vty.Platform.Wasi.Settings
+import Graphics.Vty.Platform.Wasi.Input.Classify
+import Graphics.Vty.Platform.Wasi.Input.Classify.Types
 
 import Control.Applicative
 import Control.Concurrent

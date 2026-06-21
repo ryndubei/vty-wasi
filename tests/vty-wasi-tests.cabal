@@ -6,7 +6,7 @@ author:              AUTHORS
 maintainer:          Jonathan Daugherty (cygnus@foobox.com)
 homepage:            https://github.com/jtdaugherty/vty-unix
 category:            User Interfaces
-synopsis:            Test suite for the Vty-unix library
+synopsis:            Test suite for the Vty-wasi library
 cabal-version:       1.18
 build-type:          Simple
 extra-doc-files:     LICENSE
