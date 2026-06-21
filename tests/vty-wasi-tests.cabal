@@ -86,7 +86,7 @@ test-suite verify-using-mock-input
   type:                exitcode-stdio-1.0
   hs-source-dirs:      programs
   main-is:             VerifyUsingMockInput.hs
-  ghc-options:         -threaded -Wall
+  ghc-options:         -Wall
   build-depends:       base >= 4.8 && < 5,
                        vty,
                        vty-unix,
