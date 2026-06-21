@@ -8,3 +8,6 @@ cabal.sandbox.config
 .stack-work
 .ghc.environment*
 cabal.project
+.envrc
+.direnv
+
