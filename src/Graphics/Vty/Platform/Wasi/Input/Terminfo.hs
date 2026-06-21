@@ -17,7 +17,8 @@ import Graphics.Vty.Input.Events
 import qualified Graphics.Vty.Platform.Wasi.Input.Terminfo.ANSIVT as ANSIVT
 
 import Control.Arrow
-import System.Console.Terminfo
+import System.Terminfo
+import System.Terminfo.Caps
 
 -- | Queries the terminal for all capability-based input sequences and
 -- then adds on a terminal-dependent input sequence mapping.
@@ -45,7 +46,7 @@ import System.Console.Terminfo
 -- 3. Add internally-defined table for given terminal type.
 --
 -- Precedence is currently implicit in the 'compile' algorithm.
-classifyMapForTerm :: String -> Terminal -> ClassifyMap
+classifyMapForTerm :: String -> TIDatabase -> ClassifyMap
 classifyMapForTerm termName term =
     concat $ capsClassifyMap term keysFromCapsTable
            : universalTable
@@ -58,9 +59,10 @@ classifyMapForTerm termName term =
 universalTable :: ClassifyMap
 universalTable = concat [visibleChars, ctrlChars, ctrlMetaChars, specialSupportKeys]
 
-capsClassifyMap :: Terminal -> [(String,Event)] -> ClassifyMap
+capsClassifyMap :: TIDatabase -> [(StrTermCap,Event)] -> ClassifyMap
 capsClassifyMap terminal table = [(x,y) | (Just x,y) <- map extractCap table]
-    where extractCap = first (getCapability terminal . tiGetOutput1)
+    where
+      extractCap = first (queryStrTermCap terminal)
 
 -- | Tables specific to a given terminal that are not derivable from
 -- terminfo.
@@ -167,35 +169,95 @@ specialSupportKeys =
 -- * kRIT - shift right
 --
 -- * kcuu1 - up
-keysFromCapsTable :: ClassifyMap
+keysFromCapsTable :: [(StrTermCap, Event)]
 keysFromCapsTable =
-    [ ("ka1",   EvKey KUpLeft    [])
-    , ("ka3",   EvKey KUpRight   [])
-    , ("kb2",   EvKey KCenter    [])
-    , ("kbs",   EvKey KBS        [])
-    , ("kbeg",  EvKey KBegin     [])
-    , ("kcbt",  EvKey KBackTab   [])
-    , ("kc1",   EvKey KDownLeft  [])
-    , ("kc3",   EvKey KDownRight [])
-    , ("kdch1", EvKey KDel       [])
-    , ("kcud1", EvKey KDown      [])
-    , ("kend",  EvKey KEnd       [])
-    , ("kent",  EvKey KEnter     [])
-    , ("khome", EvKey KHome      [])
-    , ("kich1", EvKey KIns       [])
-    , ("kcub1", EvKey KLeft      [])
-    , ("knp",   EvKey KPageDown  [])
-    , ("kpp",   EvKey KPageUp    [])
-    , ("kcuf1", EvKey KRight     [])
-    , ("kDC",   EvKey KDel       [MShift])
-    , ("kEND",  EvKey KEnd       [MShift])
-    , ("kHOM",  EvKey KHome      [MShift])
-    , ("kIC",   EvKey KIns       [MShift])
-    , ("kLFT",  EvKey KLeft      [MShift])
-    , ("kRIT",  EvKey KRight     [MShift])
-    , ("kcuu1", EvKey KUp        [])
-    ] ++ functionKeyCapsTable
-
--- | Cap names for function keys.
-functionKeyCapsTable :: ClassifyMap
-functionKeyCapsTable = flip map [0..63] $ \n -> ("kf" ++ show n, EvKey (KFun n) [])
+    [ (KeyA1,   EvKey KUpLeft    [])
+    , (KeyA3,   EvKey KUpRight   [])
+    , (KeyB2,   EvKey KCenter    [])
+    , (KeyBackspace,   EvKey KBS        [])
+    , (KeyBeg,  EvKey KBegin     [])
+    , (KeyBtab,  EvKey KBackTab   [])
+    , (KeyC1,   EvKey KDownLeft  [])
+    , (KeyC3,   EvKey KDownRight [])
+    , (KeyDc, EvKey KDel       [])
+    , (KeyDown, EvKey KDown      [])
+    , (KeyEnd,  EvKey KEnd       [])
+    , (KeyEnter,  EvKey KEnter     [])
+    , (KeyHome, EvKey KHome      [])
+    , (KeyIc, EvKey KIns       [])
+    , (KeyLeft, EvKey KLeft      [])
+    , (KeyNpage,   EvKey KPageDown  [])
+    , (KeyPpage,   EvKey KPageUp    [])
+    , (KeyRight, EvKey KRight     [])
+    , (KeySdc,   EvKey KDel       [MShift])
+    , (KeySend,  EvKey KEnd       [MShift])
+    , (KeyShome,  EvKey KHome      [MShift])
+    , (KeySic,   EvKey KIns       [MShift])
+    , (KeySleft,  EvKey KLeft      [MShift])
+    , (KeySright,  EvKey KRight     [MShift])
+    , (KeyUp, EvKey KUp        [])
+    , (KeyF0, EvKey (KFun 0) [])
+    , (KeyF1, EvKey (KFun 1) [])
+    , (KeyF2, EvKey (KFun 2) [])
+    , (KeyF3, EvKey (KFun 3) [])
+    , (KeyF4, EvKey (KFun 4) [])
+    , (KeyF5, EvKey (KFun 5) [])
+    , (KeyF6, EvKey (KFun 6) [])
+    , (KeyF7, EvKey (KFun 7) [])
+    , (KeyF8, EvKey (KFun 8) [])
+    , (KeyF9, EvKey (KFun 9) [])
+    , (KeyF10, EvKey (KFun 10) [])
+    , (KeyF11, EvKey (KFun 11) [])
+    , (KeyF12, EvKey (KFun 12) [])
+    , (KeyF13, EvKey (KFun 13) [])
+    , (KeyF14, EvKey (KFun 14) [])
+    , (KeyF15, EvKey (KFun 15) [])
+    , (KeyF16, EvKey (KFun 16) [])
+    , (KeyF17, EvKey (KFun 17) [])
+    , (KeyF18, EvKey (KFun 18) [])
+    , (KeyF19, EvKey (KFun 19) [])
+    , (KeyF20, EvKey (KFun 20) [])
+    , (KeyF21, EvKey (KFun 21) [])
+    , (KeyF22, EvKey (KFun 22) [])
+    , (KeyF23, EvKey (KFun 23) [])
+    , (KeyF24, EvKey (KFun 24) [])
+    , (KeyF25, EvKey (KFun 25) [])
+    , (KeyF26, EvKey (KFun 26) [])
+    , (KeyF27, EvKey (KFun 27) [])
+    , (KeyF28, EvKey (KFun 28) [])
+    , (KeyF29, EvKey (KFun 29) [])
+    , (KeyF30, EvKey (KFun 30) [])
+    , (KeyF31, EvKey (KFun 31) [])
+    , (KeyF32, EvKey (KFun 32) [])
+    , (KeyF33, EvKey (KFun 33) [])
+    , (KeyF34, EvKey (KFun 34) [])
+    , (KeyF35, EvKey (KFun 35) [])
+    , (KeyF36, EvKey (KFun 36) [])
+    , (KeyF37, EvKey (KFun 37) [])
+    , (KeyF38, EvKey (KFun 38) [])
+    , (KeyF39, EvKey (KFun 39) [])
+    , (KeyF40, EvKey (KFun 40) [])
+    , (KeyF41, EvKey (KFun 41) [])
+    , (KeyF42, EvKey (KFun 42) [])
+    , (KeyF43, EvKey (KFun 43) [])
+    , (KeyF44, EvKey (KFun 44) [])
+    , (KeyF45, EvKey (KFun 45) [])
+    , (KeyF46, EvKey (KFun 46) [])
+    , (KeyF47, EvKey (KFun 47) [])
+    , (KeyF48, EvKey (KFun 48) [])
+    , (KeyF49, EvKey (KFun 49) [])
+    , (KeyF50, EvKey (KFun 50) [])
+    , (KeyF51, EvKey (KFun 51) [])
+    , (KeyF52, EvKey (KFun 52) [])
+    , (KeyF53, EvKey (KFun 53) [])
+    , (KeyF54, EvKey (KFun 54) [])
+    , (KeyF55, EvKey (KFun 55) [])
+    , (KeyF56, EvKey (KFun 56) [])
+    , (KeyF57, EvKey (KFun 57) [])
+    , (KeyF58, EvKey (KFun 58) [])
+    , (KeyF59, EvKey (KFun 59) [])
+    , (KeyF60, EvKey (KFun 60) [])
+    , (KeyF61, EvKey (KFun 61) [])
+    , (KeyF62, EvKey (KFun 62) [])
+    , (KeyF63, EvKey (KFun 63) [])
+    ]

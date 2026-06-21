@@ -36,9 +36,10 @@ import Foreign.C.Types ( CInt(..), CLong(..) )
 import Foreign.ForeignPtr (withForeignPtr)
 import Foreign.Ptr (Ptr, plusPtr)
 
-import qualified System.Console.Terminfo as Terminfo
+import qualified System.Terminfo as Terminfo
 import System.Posix.IO (fdWriteBuf)
 import System.Posix.Types (Fd(..))
+import System.Terminfo.Caps
 
 data TerminfoCaps = TerminfoCaps
     { smcup :: Maybe CapExpression
@@ -102,21 +103,21 @@ sendCapToTerminal t cap capParams = do
 --    attributes.
 reserveTerminal :: String -> Fd -> ColorMode -> IO Output
 reserveTerminal termName outFd colorMode = do
-    ti <- Terminfo.setupTerm termName
+    ti <- either (\e -> fail $ "reserveTerminal: Failed to acquire terminfo database: " ++ e) pure =<< Terminfo.acquireDatabase termName
     -- assumes set foreground always implies set background exists.
     -- if set foreground is not set then all color changing style
     -- attributes are filtered.
-    msetaf <- probeCap ti "setaf"
-    msetf <- probeCap ti "setf"
-    let (useAlt, setForeCap)
+    let msetaf = probeCap ti SetAForeground
+        msetf = probeCap ti SetForeground
+        (useAlt, setForeCap)
             = case msetaf of
                 Just setaf -> (False, setaf)
                 Nothing -> case msetf of
                     Just setf -> (True, setf)
                     Nothing -> (True, error $ "no fore color support for terminal " ++ termName)
-    msetab <- probeCap ti "setab"
-    msetb <- probeCap ti "setb"
-    let setBackCap
+        msetab = probeCap ti SetABackground
+        msetb = probeCap ti SetBackground
+        setBackCap
             = case msetab of
                 Just setab -> setab
                 Nothing -> case msetb of
@@ -141,20 +142,20 @@ reserveTerminal termName outFd colorMode = do
         terminfoModeSupported Hyperlink = True
         terminfoModeSupported _ = False
 
-    terminfoCaps <- pure TerminfoCaps
-        <*> probeCap ti "smcup"
-        <*> probeCap ti "rmcup"
-        <*> requireCap ti "cup"
-        <*> probeCap ti "cnorm"
-        <*> probeCap ti "civis"
-        <*> pure useAlt
-        <*> pure setForeCap
-        <*> pure setBackCap
-        <*> requireCap ti "sgr0"
-        <*> requireCap ti "clear"
-        <*> requireCap ti "el"
-        <*> currentDisplayAttrCaps ti
-        <*> probeCap ti "bel"
+    let terminfoCaps = TerminfoCaps
+          (probeCap ti EnterCaMode)
+          (probeCap ti EnterDeleteMode)
+          (requireCap ti CursorAddress)
+          (probeCap ti CursorNormal)
+          (probeCap ti CursorInvisible)
+          (useAlt)
+          (setForeCap)
+          (setBackCap)
+          (requireCap ti ExitAttributeMode)
+          (requireCap ti ClearScreen)
+          (requireCap ti ClrEol)
+          (currentDisplayAttrCaps ti)
+          (probeCap ti Bell)
     let t = Output
             { terminalID = termName
             , releaseTerminal = do
@@ -204,39 +205,39 @@ reserveTerminal termName outFd colorMode = do
         maybeSendCap s = when (isJust $ s terminfoCaps) . sendCap (fromJust . s)
     return t
 
-requireCap :: Terminfo.Terminal -> String -> IO CapExpression
-requireCap ti capName
-    = case Terminfo.getCapability ti (Terminfo.tiGetStr capName) of
-        Nothing     -> fail $ "Terminal does not define required capability \"" ++ capName ++ "\""
+requireCap :: Terminfo.TIDatabase -> StrTermCap -> CapExpression
+requireCap ti cap
+    = case Terminfo.queryStrTermCap ti cap of
+        Nothing     -> error $ "Terminal does not define required capability \"" ++ show cap ++ "\""
         Just capStr -> parseCap capStr
 
-probeCap :: Terminfo.Terminal -> String -> IO (Maybe CapExpression)
-probeCap ti capName
-    = case Terminfo.getCapability ti (Terminfo.tiGetStr capName) of
-        Nothing     -> return Nothing
-        Just capStr -> Just <$> parseCap capStr
+probeCap :: Terminfo.TIDatabase -> StrTermCap -> (Maybe CapExpression)
+probeCap ti cap
+    = case Terminfo.queryStrTermCap ti cap of
+        Nothing     -> Nothing
+        Just capStr -> Just $ parseCap capStr
 
-parseCap :: String -> IO CapExpression
+parseCap :: String -> CapExpression
 parseCap capStr = do
     case parseCapExpression capStr of
-        Left e -> fail $ show e
-        Right cap -> return cap
+        Left e -> error $ show e
+        Right cap -> cap
 
-currentDisplayAttrCaps :: Terminfo.Terminal -> IO DisplayAttrCaps
+currentDisplayAttrCaps :: Terminfo.TIDatabase -> DisplayAttrCaps
 currentDisplayAttrCaps ti
-    =   pure DisplayAttrCaps
-    <*> probeCap ti "sgr"
-    <*> probeCap ti "smso"
-    <*> probeCap ti "rmso"
-    <*> probeCap ti "sitm"
-    <*> probeCap ti "ritm"
-    <*> probeCap ti "smxx"
-    <*> probeCap ti "rmxx"
-    <*> probeCap ti "smul"
-    <*> probeCap ti "rmul"
-    <*> probeCap ti "rev"
-    <*> probeCap ti "dim"
-    <*> probeCap ti "bold"
+    = DisplayAttrCaps
+    (probeCap ti SetAttributes)
+    (probeCap ti EnterStandoutMode)
+    (probeCap ti ExitStandoutMode)
+    (probeCap ti EnterItalicsMode)
+    (probeCap ti ExitItalicsMode)
+    Nothing -- enter strikethrough
+    Nothing -- exit strikethrough
+    (probeCap ti EnterUnderlineMode)
+    (probeCap ti ExitUnderlineMode)
+    (probeCap ti EnterReverseMode)
+    (probeCap ti EnterDimMode)
+    (probeCap ti EnterBoldMode)
 
 foreign import ccall "gwinsz.h vty_c_get_window_size" c_getWindowSize :: Fd -> IO CLong
 

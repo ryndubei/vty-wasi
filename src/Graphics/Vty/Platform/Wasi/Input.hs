@@ -117,7 +117,7 @@ import Control.Concurrent.STM
 #if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
 #endif
-import qualified System.Console.Terminfo as Terminfo
+import qualified System.Terminfo as Terminfo
 import System.Posix.Signals.Exts
 import System.Posix.Terminal
 import System.Posix.Types (Fd(..))
@@ -134,7 +134,7 @@ buildInput userConfig settings = do
     let tName = settingTermName settings
         fd = settingInputFd settings
 
-    terminal <- Terminfo.setupTerm tName
+    terminal <- either (\e -> fail $ "buildInput: Failed to acquire terminfo database: " ++ e) pure =<< Terminfo.acquireDatabase tName
     let inputOverrides = [(s,e) | (t,s,e) <- configInputMap userConfig, t == Nothing || t == Just tName]
         activeInputMap = classifyMapForTerm tName terminal `mappend` inputOverrides
     (setAttrs, unsetAttrs) <- attributeControl fd

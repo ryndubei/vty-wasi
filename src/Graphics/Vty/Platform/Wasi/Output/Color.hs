@@ -11,18 +11,16 @@ where
 
 import System.Environment (lookupEnv)
 
-import qualified System.Console.Terminfo as Terminfo
-import Control.Exception (catch)
+import qualified System.Terminfo as Terminfo
 import Data.Maybe
 
 import Graphics.Vty.Attributes.Color
+import System.Terminfo.Caps
 
 detectColorMode :: String -> IO ColorMode
 detectColorMode termName' = do
-    term <- catch (Just <$> Terminfo.setupTerm termName')
-                  (\(_ :: Terminfo.SetupTermError) -> return Nothing)
-    let getCap cap = term >>= \t -> Terminfo.getCapability t cap
-        termColors = fromMaybe 0 $ getCap (Terminfo.tiGetNum "colors")
+    term <- either (const $ Nothing) Just <$> Terminfo.acquireDatabase termName'
+    let termColors = fromMaybe 0 $ term >>= (`Terminfo.queryNumTermCap` MaxColors)
     colorterm <- lookupEnv "COLORTERM"
     return $ if
         | termColors <  8               -> NoColor

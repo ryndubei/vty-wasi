@@ -52,7 +52,7 @@ library
                       bytestring,
                       mtl,
                       unix,
-                      terminfo,
+                      terminfo-hs,
                       vty >= 6.6,
                       deepseq,
                       vector,
