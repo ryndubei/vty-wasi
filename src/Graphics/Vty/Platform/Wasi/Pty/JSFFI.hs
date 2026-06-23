@@ -176,10 +176,10 @@ freeJSVal v = case v of {}
 
 newtype JSString = JSString JSVal
 
-fromJSString :: JSString -> IO String 
+fromJSString :: JSString -> String 
 fromJSString = noJsffi
 
-toJSString :: String -> IO JSString
+toJSString :: String -> JSString
 toJSString = noJsffi
 
 

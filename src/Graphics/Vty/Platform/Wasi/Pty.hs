@@ -72,11 +72,11 @@ jsTypeOf :: JSVal -> IO String
 jsTypeOf jsv = bracket
   (js_typeof jsv)
   (freeJSVal . coerce)
-  fromJSString
+  (pure . fromJSString)
 
 withJSString :: String -> (JSString -> IO r) -> IO r
 withJSString str k = bracket
-  (toJSString str)
+  (pure $ toJSString str)
   (freeJSVal . coerce)
   k
 
