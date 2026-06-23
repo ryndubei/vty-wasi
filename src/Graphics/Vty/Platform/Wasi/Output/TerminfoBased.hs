@@ -5,13 +5,11 @@
 -- This module is exposed for testing purposes only; applications should
 -- never need to import this directly.
 module Graphics.Vty.Platform.Wasi.Output.TerminfoBased
-  ( reserveTerminal
-  , setWindowSize
-  )
+  ( reserveTerminal )
 where
 
 import Control.Monad (when)
-import Data.Bits (shiftL, (.&.))
+import Data.Bits ((.&.))
 import qualified Data.ByteString as BS
 import Data.ByteString.Internal (toForeignPtr)
 import Data.Terminfo.Parse
@@ -32,14 +30,13 @@ import Data.Word
 import Data.Foldable (foldMap)
 #endif
 
-import Foreign.C.Types ( CInt(..), CLong(..) )
 import Foreign.ForeignPtr (withForeignPtr)
-import Foreign.Ptr (Ptr, plusPtr)
+import Foreign.Ptr (plusPtr)
 
 import qualified System.Terminfo as Terminfo
-import System.Posix.IO (fdWriteBuf)
-import System.Posix.Types (Fd(..))
 import System.Terminfo.Caps
+import Graphics.Vty.Platform.Wasi.Pty
+import qualified GHC.IO.Device
 
 data TerminfoCaps = TerminfoCaps
     { smcup :: Maybe CapExpression
@@ -72,21 +69,6 @@ data DisplayAttrCaps = DisplayAttrCaps
     , enterBoldMode :: Maybe CapExpression
     }
 
--- kinda like:
--- https://code.google.com/p/vim/source/browse/src/fileio.c#10422
--- fdWriteBuf will throw on error. Unless the error is EINTR. On EINTR
--- the write will be retried.
-fdWriteAll :: Fd -> Ptr Word8 -> Int -> Int -> IO Int
-fdWriteAll outFd ptr len count
-    | len <  0  = fail "fdWriteAll: len is less than 0"
-    | len == 0  = return count
-    | otherwise = do
-        writeCount <- fromEnum <$> fdWriteBuf outFd ptr (toEnum len)
-        let len' = len - writeCount
-            ptr' = ptr `plusPtr` writeCount
-            count' = count + writeCount
-        fdWriteAll outFd ptr' len' count'
-
 sendCapToTerminal :: Output -> CapExpression -> [CapParam] -> IO ()
 sendCapToTerminal t cap capParams = do
     outputByteBuffer t $ writeToByteString $ writeCapExpr cap capParams
@@ -101,8 +83,8 @@ sendCapToTerminal t cap capParams = do
 --
 --  * Providing independent string capabilities for all display
 --    attributes.
-reserveTerminal :: String -> Fd -> ColorMode -> IO Output
-reserveTerminal termName outFd colorMode = do
+reserveTerminal :: String -> Pty -> ColorMode -> IO Output
+reserveTerminal termName thePty colorMode = do
     ti <- either (\e -> fail $ "reserveTerminal: Failed to acquire terminfo database: " ++ e) pure =<< Terminfo.acquireDatabase termName
     -- assumes set foreground always implies set background exists.
     -- if set foreground is not set then all color changing style
@@ -176,17 +158,16 @@ reserveTerminal termName outFd colorMode = do
             , releaseDisplay = do
                 maybeSendCap rmcup []
                 maybeSendCap cnorm []
-            , setDisplayBounds = \(w, h) ->
-                setWindowSize outFd (w, h)
+            , setDisplayBounds = const $ pure () -- noop
             , displayBounds = do
-                rawSize <- getWindowSize outFd
+                rawSize <- getWindowSize thePty
                 case rawSize of
                     (w, h)  | w < 0 || h < 0 -> fail $ "getwinsize returned < 0 : " ++ show rawSize
                             | otherwise      -> return (w,h)
             , outputByteBuffer = \outBytes -> do
                 let (fptr, offset, len) = toForeignPtr outBytes
                 actualLen <- withForeignPtr fptr
-                             $ \ptr -> fdWriteAll outFd (ptr `plusPtr` offset) len 0
+                             $ \ptr -> GHC.IO.Device.write thePty (ptr `plusPtr` offset) 0 len
                 when (toEnum len /= actualLen) $ fail $ "Graphics.Vty.Output: outputByteBuffer "
                   ++ "length mismatch. " ++ show len ++ " /= " ++ show actualLen
                   ++ " Please report this bug to vty project."
@@ -238,20 +219,6 @@ currentDisplayAttrCaps ti
     (probeCap ti EnterReverseMode)
     (probeCap ti EnterDimMode)
     (probeCap ti EnterBoldMode)
-
-foreign import ccall "gwinsz.h vty_c_get_window_size" c_getWindowSize :: Fd -> IO CLong
-
-getWindowSize :: Fd -> IO (Int,Int)
-getWindowSize fd = do
-    (a,b) <- (`divMod` 65536) `fmap` c_getWindowSize fd
-    return (fromIntegral b, fromIntegral a)
-
-foreign import ccall "gwinsz.h vty_c_set_window_size" c_setWindowSize :: Fd -> CLong -> IO ()
-
-setWindowSize :: Fd -> (Int, Int) -> IO ()
-setWindowSize fd (w, h) = do
-    let val = (h `shiftL` 16) + w
-    c_setWindowSize fd $ fromIntegral val
 
 terminfoDisplayContext :: Output -> TerminfoCaps -> DisplayRegion -> IO DisplayContext
 terminfoDisplayContext tActual terminfoCaps r = return dc

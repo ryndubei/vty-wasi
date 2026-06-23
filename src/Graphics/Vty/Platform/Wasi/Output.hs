@@ -18,6 +18,7 @@ import Graphics.Vty.Platform.Wasi.Output.XTermColor as XTermColor
 import Graphics.Vty.Platform.Wasi.Output.TerminfoBased as TerminfoBased
 
 import Data.List (isPrefixOf)
+import Graphics.Vty.Platform.Wasi.Pty
 
 #if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
@@ -38,16 +39,17 @@ import Data.Monoid ((<>))
 buildOutput :: VtyUserConfig -> UnixSettings -> IO Output
 buildOutput config settings = do
     let termName = settingTermName settings
-        fd = settingOutputFd settings
+        ptyName = settingPtyName settings
+    thePty <- either (\e -> fail $ "buildOutput: Failed to get pty: " ++ e) pure =<< getPty ptyName
 
     colorMode <- case configPreferredColorMode config of
         Nothing -> detectColorMode termName
         Just m -> return m
 
     t <- if isXtermLike termName
-         then XTermColor.reserveTerminal termName fd colorMode
+         then XTermColor.reserveTerminal termName thePty colorMode
          -- Not an xterm-like terminal. try for generic terminfo.
-         else TerminfoBased.reserveTerminal termName fd colorMode
+         else TerminfoBased.reserveTerminal termName thePty colorMode
 
     return t
 

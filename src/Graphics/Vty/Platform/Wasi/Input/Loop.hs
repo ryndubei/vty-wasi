@@ -22,7 +22,6 @@ where
 
 import Graphics.Vty.Input
 
-import Graphics.Vty.Platform.Wasi.Settings
 import Graphics.Vty.Platform.Wasi.Input.Classify
 import Graphics.Vty.Platform.Wasi.Input.Classify.Types
 
@@ -35,7 +34,6 @@ import qualified Data.ByteString as BS
 import Data.ByteString.Char8 (ByteString)
 import Data.Word (Word8)
 import Foreign (allocaArray)
-import Foreign.C.Types (CInt(..))
 import Foreign.Ptr (Ptr, castPtr)
 import Lens.Micro hiding ((<>~))
 import Lens.Micro.TH
@@ -46,8 +44,8 @@ import Control.Monad.Trans (lift)
 import Control.Monad.Trans.State (StateT(..), evalStateT)
 import Control.Monad.State.Class (MonadState, modify)
 import Control.Monad.Trans.Reader (ReaderT(..), asks)
-import System.Posix.IO (fdReadBuf, setFdOption, FdOption(..))
-import System.Posix.Types (Fd(..))
+import Graphics.Vty.Platform.Wasi.Pty
+import qualified GHC.IO.Device
 
 data InputBuffer = InputBuffer
     { _ptr :: Ptr Word8
@@ -59,7 +57,7 @@ makeLenses ''InputBuffer
 data InputState = InputState
     { _unprocessedBytes :: ByteString
     , _classifierState :: ClassifierState
-    , _deviceFd :: Fd
+    , _pty :: Pty
     , _originalInput :: Input
     , _inputBuffer :: InputBuffer
     , _classifier :: ClassifierState -> ByteString -> KClass
@@ -92,22 +90,14 @@ emit event = do
     logMsg $ "parsed event: " ++ show event
     (lift $ asks eventChannel) >>= liftIO . atomically . flip writeTChan (InputEvent event)
 
--- The timing requirements are assured by the VMIN and VTIME set for the
--- device.
 readFromDevice :: InputM ByteString
 readFromDevice = do
-    fd <- use deviceFd
+    thePty <- use pty
 
     bufferPtr <- use $ inputBuffer.ptr
     maxBytes  <- use $ inputBuffer.size
     stringRep <- liftIO $ do
-        -- The killThread used in shutdownInput will not interrupt the
-        -- foreign call fdReadBuf uses this provides a location to be
-        -- interrupted prior to the foreign call. If there is input on
-        -- the FD then the fdReadBuf will return in a finite amount of
-        -- time due to the vtime terminal setting.
-        threadWaitRead fd
-        bytesRead <- fdReadBuf fd bufferPtr (fromIntegral maxBytes)
+        bytesRead <- GHC.IO.Device.read thePty bufferPtr 0 (fromIntegral maxBytes)
         if bytesRead > 0
         then BS.packCStringLen (castPtr bufferPtr, fromIntegral bytesRead)
         else return BS.empty
@@ -147,38 +137,29 @@ dropInvalid = do
             unprocessedBytes .= BS8.empty
         _ -> return ()
 
-runInputProcessorLoop :: ClassifyMap -> Input -> Fd -> IO ()
-runInputProcessorLoop classifyTable input devFd = do
+runInputProcessorLoop :: ClassifyMap -> Input -> Pty -> IO ()
+runInputProcessorLoop classifyTable input thePty = do
     let bufferSize = 1024
     allocaArray bufferSize $ \(bufferPtr :: Ptr Word8) -> do
         let s0 = InputState BS8.empty ClassifierStart
-                    devFd input
+                    thePty input
                     (InputBuffer bufferPtr bufferSize)
                     (classify classifyTable)
         runReaderT (evalStateT loopInputProcessor s0) input
 
-initInput :: UnixSettings -> ClassifyMap -> IO Input
-initInput settings classifyTable = do
-    let devFd = settingInputFd settings
-        theVmin = settingVmin settings
-        theVtime = settingVtime settings
-
-    setFdOption devFd NonBlockingRead False
-    setTermTiming devFd theVmin (theVtime `div` 100)
-
+initInput :: Pty -> ClassifyMap -> IO Input
+initInput thePty classifyTable = do
     stopSync <- newEmptyMVar
     input <- Input <$> atomically newTChan
                    <*> pure (return ())
                    <*> pure (return ())
                    <*> pure (const $ return ())
-    inputThread <- forkIOFinally (runInputProcessorLoop classifyTable input devFd)
+    inputThread <- forkIOFinally (runInputProcessorLoop classifyTable input thePty)
                                  (\_ -> putMVar stopSync ())
     let killAndWait = do
           killThread inputThread
           takeMVar stopSync
     return $ input { shutdownInput = killAndWait }
-
-foreign import ccall "vty_set_term_timing" setTermTiming :: Fd -> Int -> Int -> IO ()
 
 forkIOFinally :: IO a -> (Either SomeException a -> IO ()) -> IO ThreadId
 forkIOFinally action and_then =

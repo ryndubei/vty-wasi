@@ -14,7 +14,6 @@ module Graphics.Vty.Platform.Wasi.Settings
 where
 
 import Control.Exception (Exception(..), throwIO)
-import Control.Monad (when, void)
 #if !(MIN_VERSION_base(4,8,0))
 import Data.Monoid (Monoid(..))
 #endif
@@ -23,9 +22,6 @@ import Data.Semigroup (Semigroup(..))
 #endif
 import Data.Typeable (Typeable)
 import System.Environment (lookupEnv)
-import System.IO (Handle, BufferMode(..), hReady, hSetBuffering, hGetChar, stdin)
-import System.Posix.IO (stdInput, stdOutput)
-import System.Posix.Types (Fd(..))
 
 -- | Type of exceptions that can be raised when configuring Vty on a
 -- Unix system.
@@ -43,14 +39,8 @@ instance Exception VtyUnixConfigurationError where
 --
 -- http://unixwiz.net/techtips/termios-vmin-vtime.html
 data UnixSettings =
-    UnixSettings { settingVmin :: Int
-                 -- ^ VMIN character count.
-                 , settingVtime :: Int
-                 -- ^ VTIME setting in tenths of a second.
-                 , settingInputFd :: Fd
-                 -- ^ The input file descriptor to use.
-                 , settingOutputFd :: Fd
-                 -- ^ The output file descriptor to use.
+    UnixSettings { settingPtyName :: String
+                 -- ^ Identifier of the pty under globalThis.vty-wasi
                  , settingTermName :: String
                  -- ^ The terminal name used to look up terminfo capabilities.
                  }
@@ -62,33 +52,10 @@ defaultSettings = do
     mb <- lookupEnv termVariable
     case mb of
       Nothing -> throwIO MissingTermEnvVar
-      Just t -> do
-        flushStdin
-        return $ UnixSettings { settingVmin      = 1
-                              , settingVtime     = 100
-                              , settingInputFd   = stdInput
-                              , settingOutputFd  = stdOutput
-                              , settingTermName  = t
-                              }
+      Just t -> return $ UnixSettings { settingPtyName = "pty", settingTermName  = t }
 
 termVariable :: String
 termVariable = "TERM"
 
 currentTerminalName :: IO (Maybe String)
 currentTerminalName = lookupEnv termVariable
-
-flushStdin :: IO ()
-flushStdin = do
-    hSetBuffering stdin NoBuffering
-    whileM $ consume stdin
-
-whileM :: (Monad m) => m Bool -> m ()
-whileM act = do
-    continue <- act
-    when continue $ whileM act
-
-consume :: Handle -> IO Bool
-consume h = do
-    avail <- hReady h
-    when avail $ void $ hGetChar h
-    return avail

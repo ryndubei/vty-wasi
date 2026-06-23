@@ -1,4 +1,5 @@
 {-# LANGUAGE CPP #-}
+{-# LANGUAGE BlockArguments #-}
 -- | Output implementation for xterm-like terminals.
 --
 -- This module is exposed for testing purposes only; applications should
@@ -21,39 +22,40 @@ import qualified Data.ByteString.Char8 as BS8
 import Data.ByteString.Char8 (ByteString)
 import Foreign.Ptr (castPtr)
 
-import Control.Monad (void, when)
+import Control.Monad (when)
 import Control.Monad.Trans
 import Data.Char (toLower, isPrint, showLitChar)
 import Data.IORef
 
-import System.Posix.IO (fdWriteBuf)
-import System.Posix.Types (ByteCount, Fd)
 import System.Posix.Env (getEnv)
 
 import Data.List (isInfixOf)
 import Data.Maybe (catMaybes)
+import Graphics.Vty.Platform.Wasi.Pty
+import qualified GHC.IO.Device
 
 #if !MIN_VERSION_base(4,11,0)
 import Data.Monoid ((<>))
 #endif
 
--- | Write a 'ByteString' to an 'Fd'.
-fdWrite :: Fd -> ByteString -> IO ByteCount
-fdWrite fd s =
+-- | Write a 'ByteString' to a 'Pty'.
+ptyWrite :: Pty -> ByteString -> IO ()
+ptyWrite thePty s =
     BS8.useAsCStringLen s $ \(buf,len) -> do
-        fdWriteBuf fd (castPtr buf) (fromIntegral len)
+        GHC.IO.Device.write thePty (castPtr buf) 0 len
 
 -- | Construct an Xterm output driver. Initialize the display to UTF-8.
-reserveTerminal :: ( Applicative m, MonadIO m ) => String -> Fd -> ColorMode -> m Output
-reserveTerminal variant outFd colorMode = liftIO $ do
-    let flushedPut = void . fdWrite outFd
+reserveTerminal :: ( Applicative m, MonadIO m ) => String -> Pty -> ColorMode -> m Output
+reserveTerminal variant thePty colorMode = liftIO $ do
+    let flushedPut = ptyWrite thePty
+          
     -- If the terminal variant is xterm-color use xterm instead since,
     -- more often than not, xterm-color is broken.
     let variant' = if variant == "xterm-color" then "xterm" else variant
 
     utf8a <- utf8Active
     when (not utf8a) $ flushedPut setUtf8CharSet
-    t <- TerminfoBased.reserveTerminal variant' outFd colorMode
+    t <- TerminfoBased.reserveTerminal variant' thePty colorMode
 
     mouseModeStatus <- newIORef False
     focusModeStatus <- newIORef False

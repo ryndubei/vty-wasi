@@ -1,4 +1,6 @@
 {-# LANGUAGE RecordWildCards, CPP #-}
+{-# LANGUAGE BlockArguments #-}
+{-# LANGUAGE LambdaCase #-}
 -- | This module provides a function to build an 'Input' for Unix
 -- terminal devices.
 --
@@ -118,9 +120,6 @@ import Control.Concurrent.STM
 import Data.Monoid ((<>))
 #endif
 import qualified System.Terminfo as Terminfo
-import System.Posix.Signals.Exts
-import System.Posix.Terminal
-import System.Posix.Types (Fd(..))
 
 import Graphics.Vty.Input
 import Graphics.Vty.Config (VtyUserConfig(..))
@@ -128,31 +127,33 @@ import Graphics.Vty.Config (VtyUserConfig(..))
 import Graphics.Vty.Platform.Wasi.Settings
 import Graphics.Vty.Platform.Wasi.Input.Loop
 import Graphics.Vty.Platform.Wasi.Input.Terminfo (classifyMapForTerm)
+import Graphics.Vty.Platform.Wasi.Pty
+import Data.Bits
 
 buildInput :: VtyUserConfig -> UnixSettings -> IO Input
 buildInput userConfig settings = do
     let tName = settingTermName settings
-        fd = settingInputFd settings
+        ptyName = settingPtyName settings
 
+    pty <- either (\e -> fail $ "buildInput: Failed to get pty: " ++ e) pure =<< getPty ptyName
     terminal <- either (\e -> fail $ "buildInput: Failed to acquire terminfo database: " ++ e) pure =<< Terminfo.acquireDatabase tName
     let inputOverrides = [(s,e) | (t,s,e) <- configInputMap userConfig, t == Nothing || t == Just tName]
         activeInputMap = classifyMapForTerm tName terminal `mappend` inputOverrides
-    (setAttrs, unsetAttrs) <- attributeControl fd
+    (setAttrs, unsetAttrs) <- attributeControl pty
     setAttrs
-    input <- initInput settings activeInputMap
-    let pokeIO = Catch $ do
+    input <- initInput pty activeInputMap
+    let pokeIO = do
             setAttrs
             atomically $ writeTChan (eventChannel input) ResumeAfterInterrupt
-    _ <- installHandler windowChange pokeIO Nothing
-    _ <- installHandler continueProcess pokeIO Nothing
-
+    dispose <- installPtySignalHandler pty \case
+      SIGWINCH -> pokeIO
+      _ -> pure ()
     let restore = unsetAttrs
 
     return $ input
         { shutdownInput = do
             shutdownInput input
-            _ <- installHandler windowChange Ignore Nothing
-            _ <- installHandler continueProcess Ignore Nothing
+            dispose
             restore
         , restoreInputState = restoreInputState input >> restore
         }
@@ -182,19 +183,17 @@ buildInput userConfig settings = do
 -- The configuration action also explicitly sets these flags:
 --
 -- * ICRNL (input carriage returns are mapped to newlines)
-attributeControl :: Fd -> IO (IO (), IO ())
-attributeControl fd = do
-    original <- getTerminalAttributes fd
-    let vtyMode = foldl withMode clearedFlags flagsToSet
-        clearedFlags = foldl withoutMode original flagsToUnset
-        flagsToSet = [ MapCRtoLF -- ICRNL
-                     ]
-        flagsToUnset = [ StartStopOutput -- IXON
-                       , KeyboardInterrupts -- ISIG
-                       , EnableEcho -- ECHO
-                       , ProcessInput -- ICANON
-                       , ExtendedFunctions -- IEXTEN
-                       ]
-    let setAttrs = setTerminalAttributes fd vtyMode Immediately
-        unsetAttrs = setTerminalAttributes fd original Immediately
+attributeControl :: Pty -> IO (IO (), IO ())
+attributeControl pty = do
+    original <- getTermios pty
+    let new = original
+          { termios_iflag = (termios_iflag original .|. ICRNL) .&. complement IXON
+          , termios_lflag = termios_lflag original
+              .&. complement ISIG
+              .&. complement ECHO
+              .&. complement ICANON
+              .&. complement IEXTEN
+          }
+    let setAttrs = setTermios pty new
+        unsetAttrs = setTermios pty original
     return (setAttrs, unsetAttrs)
