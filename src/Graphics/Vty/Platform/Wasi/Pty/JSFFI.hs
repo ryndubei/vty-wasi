@@ -153,7 +153,7 @@ foreign import javascript unsafe "new Uint8Array.from($1.cc)"
   js_termios_cc    :: JSTermios -> IO JSByteArray
 
 foreign import javascript unsafe "{iflag: $1, oflag: $2, cflag: $3, lflag: $4, cc: Array.from($5)}"
-  js_to_termios    :: Int -> Int -> Int -> Int -> JSByteArray -> IO Termios
+  js_to_termios    :: Int -> Int -> Int -> Int -> JSByteArray -> IO JSTermios
 
 
 foreign import javascript unsafe "$1.ioctl('TIOCGWINSZ')"
