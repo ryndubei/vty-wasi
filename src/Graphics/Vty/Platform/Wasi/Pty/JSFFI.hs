@@ -26,6 +26,7 @@ module Graphics.Vty.Platform.Wasi.Pty.JSFFI
   , js_pty_is_readable
   , js_pty_on_writable
   , js_pty_is_writable
+  , js_pty_on_signal
   , js_call_jsval
   , js_to_jscallable
   , js_sleep
@@ -115,6 +116,9 @@ foreign import javascript unsafe "$1.onWritable($2).dispose"
 
 foreign import javascript unsafe "$1.writable"
   js_pty_is_writable :: Pty -> IO Bool
+
+foreign import javascript unsafe "$1.onSignal(sig => switch (sig) { case 'SIGINT': return $2(); case 'SIGQUIT': return $3(); case 'SIGTSTP': return $4(); case 'SIGWINCH': return $5();}).dispose"
+  js_pty_on_signal :: Pty -> JSCallable -> JSCallable -> JSCallable -> JSCallable -> IO JSCallable
 
 
 foreign import javascript unsafe "dynamic"
@@ -226,6 +230,10 @@ js_pty_on_writable = noJsffi
 
 js_pty_is_writable :: Pty -> IO Bool
 js_pty_is_writable = noJsffi
+
+js_pty_on_signal :: Pty -> JSCallable -> JSCallable -> JSCallable -> JSCallable -> IO JSCallable
+js_pty_on_signal = noJsffi
+
 
 js_call_jsval :: JSCallable -> IO ()
 js_call_jsval = noJsffi

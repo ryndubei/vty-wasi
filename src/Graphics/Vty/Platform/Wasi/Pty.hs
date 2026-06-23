@@ -13,12 +13,14 @@ module Graphics.Vty.Platform.Wasi.Pty
   , Termios(..)
   , getTermios
   , setTermios
+  , installPtySignalHandler
   , pattern ICANON
   , pattern ISIG
   , pattern ECHO
   , pattern IEXTEN
   , pattern ICRNL
   , pattern IXON
+  , Signal(..)
   ) where
 
 import GHC.IO.Device
@@ -56,6 +58,8 @@ pattern ICANON = 0x0002
 pattern ECHO = 0x0008
 pattern IEXTEN = 0x8000
 
+data Signal = SIGINT | SIGQUIT | SIGTSTP | SIGWINCH
+
 -- | On failure, returns the type of the JSVal.
 toJsObject :: JSVal -> IO (Either String JSObject)
 toJsObject jsv = do
@@ -75,6 +79,15 @@ withJSString str k = bracket
   (toJSString str)
   (freeJSVal . coerce)
   k
+
+installPtySignalHandler :: Pty -> (Signal -> IO ()) -> IO (IO ())
+installPtySignalHandler pty h = evalContT $ do
+  h1 <- ContT $ bracketOnError (js_to_jscallable $ h SIGINT) (freeJSVal . coerce)
+  h2 <- ContT $ bracketOnError (js_to_jscallable $ h SIGQUIT) (freeJSVal . coerce)
+  h3 <- ContT $ bracketOnError (js_to_jscallable $ h SIGTSTP) (freeJSVal . coerce)
+  h4 <- ContT $ bracketOnError (js_to_jscallable $ h SIGWINCH) (freeJSVal . coerce)
+  dispose <- ContT $ bracketOnError (js_pty_on_signal pty h1 h2 h3 h4) (freeJSVal . coerce)
+  pure (js_call_jsval dispose >> mapM_ (freeJSVal . coerce) [h1, h2, h3, h4])
 
 -- | Get the 'Pty' given its identifier in globalThis.vty-wasi
 getPty :: String -> IO (Either String Pty)
