@@ -46,8 +46,11 @@ library
                       Graphics.Vty.Platform.Wasi.Output.Color
                       Graphics.Vty.Platform.Wasi.Output.TerminfoBased
                       Graphics.Vty.Platform.Wasi.Output.XTermColor
+                      Graphics.Vty.Platform.Wasi.Pty
+                      Graphics.Vty.Platform.Wasi.Pty.JSFFI
                       Graphics.Vty.Platform.Wasi.Settings
     build-depends:    base >= 4.8 && < 5,
+                      async,
                       blaze-builder,
                       bytestring,
                       mtl,
@@ -55,8 +58,10 @@ library
                       terminfo-hs,
                       vty >= 6.6,
                       deepseq,
+                      ghc-experimental,
                       vector,
                       parsec,
+                      primitive,
                       containers,
                       utf8-string,
                       transformers,
