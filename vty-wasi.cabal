@@ -50,7 +50,6 @@ library
                       Graphics.Vty.Platform.Wasi.Pty.JSFFI
                       Graphics.Vty.Platform.Wasi.Settings
     build-depends:    base >= 4.8 && < 5,
-                      async,
                       blaze-builder,
                       bytestring,
                       mtl,

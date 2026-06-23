@@ -11,10 +11,15 @@ module Graphics.Vty.Platform.Wasi.Pty.JSFFI
   , JSTermios(..)
   , JSWinsize(..)
   , JSCallable(..)
+  , JSObject(..)
   , js_byte_array_length
   , js_subarray
   , js_memory
   , js_copy_to_byte_array
+  , js_get_global
+  , js_index_object
+  , js_typeof
+  , js_instanceof
   , js_pty_write
   , js_pty_read
   , js_pty_on_readable
@@ -38,6 +43,9 @@ module Graphics.Vty.Platform.Wasi.Pty.JSFFI
 
   , JSVal
   , freeJSVal
+  , JSString(..)
+  , fromJSString
+  , toJSString
   )
   where
 
@@ -59,6 +67,7 @@ newtype JSWinsize = JSWinsize JSVal
 
 newtype JSCallable = JSCallable JSVal
 
+newtype JSObject = JSObject JSVal
 
 #if defined(wasi_HOST_OS)
 
@@ -74,6 +83,19 @@ foreign import javascript unsafe "new Uint8Array(__exports.memory.buffer.slice($
 -- assumption: doing the loop entirely within js is faster
 foreign import javascript unsafe "for (i=0; i<$1.length; i++) { $2[i] = $1[i] }"
   js_copy_to_byte_array :: JSByteArray -> JSByteArray -> IO ()
+
+
+foreign import javascript unsafe "globalThis[$2]"
+  js_get_global :: JSString -> IO JSVal
+
+foreign import javascript unsafe "$1[$2]"
+  js_index_object :: JSObject -> JSString -> IO JSVal
+
+foreign import javascript unsafe "typeof $1"
+  js_typeof :: JSVal -> IO JSString
+
+foreign import javascript unsafe "$1 instanceof $2"
+  js_instanceof :: JSVal -> JSObject -> IO Bool
 
 
 foreign import javascript unsafe "$1.write(Array.from($2))"
@@ -148,6 +170,15 @@ freeJSVal :: JSVal -> IO ()
 freeJSVal v = case v of {}
 
 
+newtype JSString = JSString JSVal
+
+fromJSString :: JSString -> IO String 
+fromJSString = noJsffi
+
+toJSString :: String -> IO JSString
+toJSString = noJsffi
+
+
 noJsffi :: a
 noJsffi = error "no JSFFI"
 
@@ -163,6 +194,19 @@ js_memory = noJsffi
 
 js_copy_to_byte_array :: JSByteArray -> JSByteArray -> IO ()
 js_copy_to_byte_array = noJsffi
+
+
+js_get_global :: JSString -> IO JSVal
+js_get_global = noJsffi
+
+js_index_object :: JSObject -> JSString -> IO JSVal
+js_index_object = noJsffi
+
+js_typeof :: JSVal -> IO JSString
+js_typeof = noJsffi
+
+js_instanceof :: JSVal -> JSObject -> IO Bool
+js_instanceof = noJsffi
 
 
 js_pty_write :: Pty -> JSByteArray -> IO ()

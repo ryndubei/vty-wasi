@@ -4,25 +4,37 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE InstanceSigs #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Graphics.Vty.Platform.Wasi.Pty
   ( Pty(..)
+  , getPty
   , getWindowSize
+  , Termios(..)
+  , getTermios
+  , setTermios
+  , pattern ICANON
+  , pattern ISIG
+  , pattern ECHO
+  , pattern IEXTEN
+  , pattern ICRNL
+  , pattern IXON
   ) where
 
 import GHC.IO.Device
-import GHC.IO.Exception
 import Data.Word
 import Data.Coerce
 import Control.Monad
 import Control.Concurrent.MVar
 import Foreign.Ptr
-import Control.Concurrent.Async
 import Graphics.Vty.Platform.Wasi.Pty.JSFFI
 import Control.Exception
 import Data.Primitive.ByteArray
 import Foreign (allocaBytes)
-import Data.Bits
+import Control.Monad.Trans.Except
+import Control.Monad.Trans.Cont
+import Control.Monad.Trans.Class
+import Control.Monad.IO.Class
 
 data Termios = Termios
   { termios_iflag :: !Int
@@ -33,9 +45,57 @@ data Termios = Termios
   }
 
 -- We don't need VTIME, VMIN because all bytes are guaranteed to be sent together.
-pattern ICANON, ECHO :: Int
+-- They are also not supported on xterm-pty.
+pattern ICANON, ECHO, ICRNL, IXON, ISIG, IEXTEN :: Int
+
+pattern ICRNL = 0x0100
+pattern IXON = 0x0400
+
+pattern ISIG = 0x0001
 pattern ICANON = 0x0002
 pattern ECHO = 0x0008
+pattern IEXTEN = 0x8000
+
+-- | On failure, returns the type of the JSVal.
+toJsObject :: JSVal -> IO (Either String JSObject)
+toJsObject jsv = do
+  ty <- jsTypeOf jsv
+  if ty == "object"
+    then pure $ Right (coerce jsv)
+    else pure (Left ty)
+
+jsTypeOf :: JSVal -> IO String
+jsTypeOf jsv = bracket
+  (js_typeof jsv)
+  (freeJSVal . coerce)
+  fromJSString
+
+withJSString :: String -> (JSString -> IO r) -> IO r
+withJSString str k = bracket
+  (toJSString str)
+  (freeJSVal . coerce)
+  k
+
+-- | Get the 'Pty' given its identifier in globalThis.vty-wasi
+getPty :: String -> IO (Either String Pty)
+getPty ident = evalContT $ runExceptT do
+
+  jsVtyWasi <- lift . ContT $ bracket (withJSString "vty-wasi" js_get_global) freeJSVal
+  jsVtyWasi' <- (liftIO $ toJsObject jsVtyWasi) >>= \case
+    Left ty -> throwE $ "globalThis.vty-wasi expected to be an object, but is " ++ ty
+    Right o -> pure o
+
+  slavePtyClass <- lift . ContT $ bracket (withJSString "Slave" (js_index_object jsVtyWasi')) freeJSVal
+  slavePtyClass' <- (liftIO $ toJsObject slavePtyClass) >>= \case
+    Left ty -> throwE $ "globalThis.vty-wasi.Slave expected to be an object, but is " ++ ty
+    Right o -> pure o
+
+  jsPty <- lift . ContT $ bracket (withJSString ident (js_index_object jsVtyWasi')) freeJSVal
+  
+  b <- liftIO $ js_instanceof jsPty slavePtyClass'
+  if b
+    then pure $ coerce jsPty
+    else throwE $ "globalThis.vty-wasi." ++ ident ++ " must be an instance of globalThis.vty-wasi.Slave"
 
 -- | Copies at most 'n' bytes of the JSByteArray to the given
 -- location in memory starting from index 0.
@@ -157,6 +217,7 @@ instance RawIO Pty where
       else do
         pure 0
 
+{-
 instance IODevice Pty where
   ready pty writing msecs = do
     let (isReady, onReady) =
@@ -202,3 +263,4 @@ instance IODevice Pty where
   devType _ = pure Stream
   dup _ = throwIO $ unsupportedOperation { ioe_location = "dup @Pty" }
   dup2 _ _ = throwIO $ unsupportedOperation { ioe_location = "dup2 @Pty" }
+-}
