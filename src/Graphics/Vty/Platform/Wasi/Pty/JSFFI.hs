@@ -86,7 +86,7 @@ foreign import javascript unsafe "for (i=0; i<$1.length; i++) { $2[i] = $1[i] }"
   js_copy_to_byte_array :: JSByteArray -> JSByteArray -> IO ()
 
 
-foreign import javascript unsafe "globalThis[$2]"
+foreign import javascript unsafe "globalThis[$1]"
   js_get_global :: JSString -> IO JSVal
 
 foreign import javascript unsafe "$1[$2]"
