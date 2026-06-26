@@ -89,26 +89,17 @@ installPtySignalHandler pty h = evalContT $ do
   dispose <- ContT $ bracketOnError (js_pty_on_signal pty h1 h2 h3 h4) (freeJSVal . coerce)
   pure (js_call_jsval dispose >> mapM_ (freeJSVal . coerce) [h1, h2, h3, h4])
 
--- | Get the 'Pty' given its identifier in globalThis.vty_wasi
+-- | Get the 'Pty' given its identifier in globalThis
 getPty :: String -> IO (Either String Pty)
 getPty ident = evalContT $ runExceptT do
 
-  jsVtyWasi <- lift . ContT $ bracket (withJSString "vty_wasi" js_get_global) freeJSVal
-  jsVtyWasi' <- (liftIO $ toJsObject jsVtyWasi) >>= \case
-    Left ty -> throwE $ "globalThis.vty_wasi expected to be an object, but is " ++ ty
+  jsPty <- lift . ContT $ bracket (withJSString ident js_get_global) freeJSVal
+  jsPty' <- (liftIO $ toJsObject jsPty) >>= \case
+    Left ty -> throwE $ "globalThis." ++ ident ++ " expected to be an object, but is " ++ ty
     Right o -> pure o
-
-  slavePtyClass <- lift . ContT $ bracket (withJSString "Slave" (js_index_object jsVtyWasi')) freeJSVal
-  slavePtyClass' <- (liftIO $ toJsObject slavePtyClass) >>= \case
-    Left ty -> throwE $ "globalThis.vty_wasi.Slave expected to be an object, but is " ++ ty
-    Right o -> pure o
-
-  jsPty <- lift . ContT $ bracket (withJSString ident (js_index_object jsVtyWasi')) freeJSVal
   
-  b <- liftIO $ js_instanceof jsPty slavePtyClass'
-  if b
-    then pure $ coerce jsPty
-    else throwE $ "globalThis.vty_wasi." ++ ident ++ " must be an instance of globalThis.vty_wasi.Slave"
+  -- TODO check jsPty' for available methods before coercing to Pty
+  pure $ coerce jsPty'
 
 -- | Copies at most 'n' bytes of the JSByteArray to the given
 -- location in memory starting from index 0.
