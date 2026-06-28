@@ -46,6 +46,7 @@ module Graphics.Vty.Platform.Wasi.Pty.JSFFI
   , js_get_fd
   , js_fd_ioctl_tcgets
   , js_fd_ioctl_tcsets
+  , js_fd_ioctl_tiocgwinsz
   , js_fd_on_sigwinch
 
   , JSVal
@@ -186,13 +187,16 @@ that we care about.
 -}
 
 foreign import javascript unsafe "__ghc_wasm_jsffi_dyld.#wasi.fds[$1]"
-  js_get_fd :: Int -> IO JSVal
+  js_get_fd :: Int -> IO JSFd
 
 foreign import javascript unsafe "$1?.ioctl('TCGETS')"
-  js_fd_ioctl_tcgets :: JSFd -> IO JSVal
+  js_fd_ioctl_tcgets :: JSFd -> IO JSTermios
 
 foreign import javascript unsafe "$1?.ioctl('TCSETS', $2)"
   js_fd_ioctl_tcsets :: JSFd -> JSTermios -> IO ()
+
+foreign import javascript unsafe "$1?.ioctl('TIOCGWINSZ')"
+  js_fd_ioctl_tiocgwinsz :: JSFd -> IO JSWinsize
 
 {-
 HACK (2)
@@ -202,7 +206,7 @@ Similarly, there is nothing stopping us from defining onSignal methods for
 -}
 
 foreign import javascript unsafe "$1?.onSignal(sig => {if (sig === 'SIGWINCH') { return $2() }}).dispose"
-  js_fd_on_sigwinch :: JSFd -> JSCallable -> IO JSVal
+  js_fd_on_sigwinch :: JSFd -> JSCallable -> IO JSCallable
 
 #else
 -- stub version of the module for HLS
@@ -329,6 +333,9 @@ js_fd_ioctl_tcgets = noJsffi
 
 js_fd_ioctl_tcsets :: JSFd -> JSTermios -> IO ()
 js_fd_ioctl_tcsets = noJsffi
+
+js_fd_ioctl_tiocgwinsz :: JSFd -> IO JSWinsize
+js_fd_ioctl_tiocgwinsz = noJsffi
 
 js_fd_on_sigwinch :: JSFd -> JSCallable -> IO JSVal
 js_fd_on_sigwinch = noJsffi
