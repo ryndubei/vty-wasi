@@ -4,6 +4,7 @@
 #endif
 
 {-# LANGUAGE EmptyCase #-}
+{-# LANGUAGE TypeFamilies #-}
 
 module Graphics.Vty.Platform.Wasi.Pty.JSFFI
   ( JSByteArray(..)
@@ -12,6 +13,7 @@ module Graphics.Vty.Platform.Wasi.Pty.JSFFI
   , JSWinsize(..)
   , JSCallable(..)
   , JSObject(..)
+  , JSFd(..)
   , js_byte_array_length
   , js_subarray
   , js_memory
@@ -41,6 +43,10 @@ module Graphics.Vty.Platform.Wasi.Pty.JSFFI
   , js_pty_winsize
   , js_winsize_col
   , js_winsize_row
+  , js_get_fd
+  , js_fd_ioctl_tcgets
+  , js_fd_ioctl_tcsets
+  , js_fd_on_sigwinch
 
   , JSVal
   , freeJSVal
@@ -69,6 +75,8 @@ newtype JSWinsize = JSWinsize JSVal
 newtype JSCallable = JSCallable JSVal
 
 newtype JSObject = JSObject JSVal
+
+newtype JSFd = JSFd JSVal
 
 #if defined(wasi_HOST_OS)
 
@@ -164,6 +172,37 @@ foreign import javascript unsafe "$1[0]"
 
 foreign import javascript unsafe "$1[1]"
   js_winsize_row :: JSWinsize -> IO Int
+
+{-
+HACK
+
+Assumption: @bjorn3/browser_wasi_shim is the wasi implementation.
+(or #wasi.fds is otherwise an array of file descriptor objects)
+This is the default when node is not being used.
+
+While WASI does not define an ioctl operation, there is nothing stopping
+us from just defining an ioctl method on certain file descriptors
+that we care about. 
+-}
+
+foreign import javascript unsafe "__ghc_wasm_jsffi_dyld.#wasi.fds[$1]"
+  js_get_fd :: Int -> IO JSVal
+
+foreign import javascript unsafe "$1?.ioctl('TCGETS')"
+  js_fd_ioctl_tcgets :: JSFd -> IO JSVal
+
+foreign import javascript unsafe "$1?.ioctl('TCSETS', $2)"
+  js_fd_ioctl_tcsets :: JSFd -> JSTermios -> IO ()
+
+{-
+HACK (2)
+
+Similarly, there is nothing stopping us from defining onSignal methods for
+"signals" related to that file descriptor.
+-}
+
+foreign import javascript unsafe "$1?.onSignal(sig => {if (sig === 'SIGWINCH') { return $2() }}).dispose"
+  js_fd_on_sigwinch :: JSFd -> JSCallable -> IO JSVal
 
 #else
 -- stub version of the module for HLS
@@ -281,5 +320,17 @@ js_winsize_col = noJsffi
 
 js_winsize_row :: JSWinsize -> IO Int
 js_winsize_row = noJsffi
+
+js_get_fd :: Int -> IO JSVal
+js_get_fd = noJsffi
+
+js_fd_ioctl_tcgets :: JSFd -> IO JSVal
+js_fd_ioctl_tcgets = noJsffi
+
+js_fd_ioctl_tcsets :: JSFd -> JSTermios -> IO ()
+js_fd_ioctl_tcsets = noJsffi
+
+js_fd_on_sigwinch :: JSFd -> JSCallable -> IO JSVal
+js_fd_on_sigwinch = noJsffi
 
 #endif
